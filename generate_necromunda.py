@@ -30,13 +30,17 @@ def main():
     ns = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
 
     items = []
+    
     for url_el in root.findall("sm:url", ns):
         loc_el = url_el.find("sm:loc", ns)
         lastmod_el = url_el.find("sm:lastmod", ns)
+        
         if loc_el is None:
             continue
+            
         loc = (loc_el.text or "").strip()
-           if not ARTICLE_RE.match(loc):
+        
+        if not ARTICLE_RE.match(loc):
             continue
 
         if FILTER_NECROMUNDA:
