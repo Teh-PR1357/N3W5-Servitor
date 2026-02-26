@@ -38,11 +38,14 @@ def main():
         loc = (loc_el.text or "").strip()
         if not ARTICLE_RE.match(loc):
             continue
-          if FILTER_NECROMUNDA:
-    try:
-        html = fetch(loc).decode("utf-8", errors="ignore").lower()
-    except Exception:
-        continue
+                    if FILTER_NECROMUNDA:
+            try:
+                html = fetch(loc).decode("utf-8", errors="ignore")
+            except Exception:
+                continue
+
+            if not any(m.lower() in html.lower() for m in NECRO_MARKERS):
+                continue
 
     if not any(m.lower() in html for m in NECRO_MARKERS):
         continue
