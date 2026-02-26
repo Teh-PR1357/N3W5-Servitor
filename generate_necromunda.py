@@ -21,7 +21,7 @@ NECRO_MARKERS = [
 
 OUTPUT_PATH = "docs/necromunda.xml"
 
-CHANNEL_TITLE = "N3W5-Servitor – Necromunda"
+CHANNEL_TITLE = "The N3W5-Servitor – Necromunda"
 CHANNEL_LINK = "https://www.warhammer-community.com/en-gb/setting/necromunda/"
 CHANNEL_DESC = "Necromunda-only RSS feed (sitemap-based, filtered; titles extracted)"
 
