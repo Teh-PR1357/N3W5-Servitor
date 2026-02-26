@@ -36,20 +36,17 @@ def main():
         if loc_el is None:
             continue
         loc = (loc_el.text or "").strip()
-        if not ARTICLE_RE.match(loc):
+    if not ARTICLE_RE.match(loc):
+         continue
+
+    if FILTER_NECROMUNDA:
+        try:
+            html = fetch(loc).decode("utf-8", errors="ignore")
+        except Exception:
             continue
-            
-        if FILTER_NECROMUNDA:
-            try:
-                html = fetch(loc).decode("utf-8", errors="ignore")
-            except Exception:
-                continue
 
-            if not any(m.lower() in html.lower() for m in NECRO_MARKERS):
-                continue
-
-    if not any(m.lower() in html for m in NECRO_MARKERS):
-        continue
+    if not any(m.lower() in html.lower() for m in NECRO_MARKERS):
+            continue
 
         lastmod = None
         if lastmod_el is not None and lastmod_el.text:
