@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
