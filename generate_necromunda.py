@@ -7,8 +7,8 @@ from urllib.request import urlopen, Request
 SITEMAP_URL = "https://www.warhammer-community.com/sitemap.xml"
 ARTICLE_RE = re.compile(r"^https://www\.warhammer-community\.com/en-gb/articles/")
 MAX_ITEMS = 50
-FILTER_NECROMUNDA = True
 
+FILTER_NECROMUNDA = True
 NECRO_MARKERS = [
     "/topics/necromunda/",
     "/setting/necromunda/",
@@ -30,16 +30,16 @@ def main():
     ns = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
 
     items = []
-    
+
     for url_el in root.findall("sm:url", ns):
         loc_el = url_el.find("sm:loc", ns)
         lastmod_el = url_el.find("sm:lastmod", ns)
-        
+
         if loc_el is None:
             continue
-            
+
         loc = (loc_el.text or "").strip()
-        
+
         if not ARTICLE_RE.match(loc):
             continue
 
@@ -59,13 +59,6 @@ def main():
                 lastmod = datetime.fromisoformat(t)
             except Exception:
                 lastmod = None
-        lastmod = None
-        if lastmod_el is not None and lastmod_el.text:
-            t = lastmod_el.text.strip().replace("Z", "+00:00")
-            try:
-                lastmod = datetime.fromisoformat(t)
-            except Exception:
-                lastmod = None
 
         items.append((lastmod or datetime.now(timezone.utc), loc))
 
@@ -78,24 +71,22 @@ def main():
     rss.append('<?xml version="1.0" encoding="UTF-8"?>')
     rss.append('<rss version="2.0">')
     rss.append("<channel>")
-    rss.append("<title>Warhammer Community – All News (sitemap-based)</title>")
+    rss.append("<title>Warhammer Community – Necromunda</title>")
     rss.append("<link>https://www.warhammer-community.com/en-gb/all-news-and-features/</link>")
-    rss.append("<description>Unofficial RSS generated from Warhammer Community sitemap.xml</description>")
+    rss.append("<description>Necromunda-only RSS feed</description>")
     rss.append(f"<lastBuildDate>{rfc2822(now)}</lastBuildDate>")
 
     for dt, loc in items:
-        pub = dt.astimezone(timezone.utc)
-        slug = loc.rstrip("/").split("/")[-1]
         rss.append("<item>")
-        rss.append(f"<title>{slug}</title>")
+        rss.append(f"<title>{loc.rstrip('/').split('/')[-1]}</title>")
         rss.append(f"<link>{loc}</link>")
         rss.append(f"<guid isPermaLink=\"true\">{loc}</guid>")
-        rss.append(f"<pubDate>{rfc2822(pub)}</pubDate>")
+        rss.append(f"<pubDate>{rfc2822(dt.astimezone(timezone.utc))}</pubDate>")
         rss.append("</item>")
 
     rss.append("</channel></rss>")
 
-  with open("docs/necromunda.xml", "wb") as f:
+    with open("docs/necromunda.xml", "wb") as f:
         f.write("\n".join(rss).encode("utf-8"))
 
 if __name__ == "__main__":
