@@ -1,0 +1,29 @@
+name: Build RSS
+
+on:
+  schedule:
+    - cron: "15 * * * *"   # stündlich (Minute 15, UTC)
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate RSS
+        run: |
+          mkdir -p docs
+          python generate.py
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add docs/rss.xml
+          git diff --cached --quiet || (git commit -m "Update RSS" && git push)
