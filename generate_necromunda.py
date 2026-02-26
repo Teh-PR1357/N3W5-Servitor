@@ -38,7 +38,8 @@ def main():
         loc = (loc_el.text or "").strip()
         if not ARTICLE_RE.match(loc):
             continue
-                    if FILTER_NECROMUNDA:
+            
+        if FILTER_NECROMUNDA:
             try:
                 html = fetch(loc).decode("utf-8", errors="ignore")
             except Exception:
