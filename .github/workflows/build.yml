@@ -20,7 +20,7 @@ jobs:
         run: |
           mkdir -p docs
           python generate.py
-          generate_necromunda.py
+          python generate_necromunda.py
 
       - name: Commit and push if changed
         run: |
