@@ -4,6 +4,7 @@ import html as html_lib
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from urllib.request import urlopen, Request
+from pathlib import Path
 
 # --- Settings ---
 SITEMAP_URL = "https://www.warhammer-community.com/sitemap.xml"
@@ -12,16 +13,16 @@ ARTICLE_RE = re.compile(r"^https://www\.warhammer-community\.com/en-gb/articles/
 MAX_ITEMS = 150
 OUTPUT_PATH = "docs/rss.xml"
 
-CHANNEL_TITLE = "The N3W5-Servitor – Warhammer News"
-CHANNEL_LINK = "https://www.warhammer-community.com/en-gb/all-news-and-features/?sortby=date_desc&page=1"
+CHANNEL_TITLE = "N3W5-Servitor – Warhammer News"
+CHANNEL_LINK = "https://www.warhammer-community.com/en-gb/all-news-and-features/"
 CHANNEL_DESC = "Unofficial RSS generated from Warhammer Community sitemap.xml (titles extracted)"
+
+# First-run marker (committed to repo by Actions)
+FIRST_RUN_MARKER = Path("docs/.first_run_done_allnews")
 
 # --- Helpers ---
 def fetch(url: str) -> bytes:
-    req = Request(
-        url,
-        headers={"User-Agent": "Mozilla/5.0 (RSS generator; github actions)"},
-    )
+    req = Request(url, headers={"User-Agent": "Mozilla/5.0 (RSS generator; github actions)"})
     with urlopen(req, timeout=30) as r:
         return r.read()
 
@@ -29,7 +30,6 @@ def rfc2822(dt: datetime) -> str:
     return dt.strftime("%a, %d %b %Y %H:%M:%S %z")
 
 def parse_lastmod(lastmod_text: str) -> datetime | None:
-    # example: 2024-09-17T15:12:09.000000Z
     t = lastmod_text.strip().replace("Z", "+00:00")
     try:
         return datetime.fromisoformat(t)
@@ -37,35 +37,30 @@ def parse_lastmod(lastmod_text: str) -> datetime | None:
         return None
 
 def xml_escape(s: str) -> str:
-    # RSS is XML; escape &, <, >, quotes etc.
     return html_lib.escape(s, quote=True)
 
 def extract_title(page_html: str) -> str:
-    """
-    Pulls the <title>...</title> content and strips the common suffix.
-    Falls back to a generic name if not found.
-    """
     m = re.search(r"<title>(.*?)</title>", page_html, re.IGNORECASE | re.DOTALL)
     if not m:
         return "Warhammer Community"
     title = m.group(1)
-    # Remove suffix like " | Warhammer Community"
     title = re.sub(r"\s*\|\s*Warhammer Community.*$", "", title, flags=re.IGNORECASE)
-    # Decode HTML entities (&amp; etc.)
     title = html_lib.unescape(title)
-    # Normalize whitespace
     title = re.sub(r"\s+", " ", title).strip()
     return title or "Warhammer Community"
 
 # --- Main ---
 def main():
+    # First run => only publish 1 newest item (prevents backlog spam on bot attach)
+    is_first_run = not FIRST_RUN_MARKER.exists()
+    target_count = 1 if is_first_run else MAX_ITEMS
+
     xml_bytes = fetch(SITEMAP_URL)
     root = ET.fromstring(xml_bytes)
     ns = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
 
     candidates: list[tuple[datetime, str]] = []
 
-    # 1) Collect article URLs + lastmod from sitemap
     for url_el in root.findall("sm:url", ns):
         loc_el = url_el.find("sm:loc", ns)
         lastmod_el = url_el.find("sm:lastmod", ns)
@@ -85,11 +80,9 @@ def main():
 
         candidates.append((dt, loc))
 
-    # 2) Newest first, keep top MAX_ITEMS
     candidates.sort(key=lambda x: x[0], reverse=True)
-    items = candidates[:MAX_ITEMS]
+    items = candidates[:target_count]
 
-    # 3) Build RSS
     now = datetime.now(timezone.utc)
 
     rss: list[str] = []
@@ -101,13 +94,11 @@ def main():
     rss.append(f"<description>{xml_escape(CHANNEL_DESC)}</description>")
     rss.append(f"<lastBuildDate>{rfc2822(now)}</lastBuildDate>")
 
-    # We fetch each article page (only MAX_ITEMS) to extract a human title
     for dt, loc in items:
         try:
             page_html = fetch(loc).decode("utf-8", errors="ignore")
             title = extract_title(page_html)
         except Exception:
-            # Fallback if the fetch fails for a specific item
             title = loc.rstrip("/").split("/")[-1] or "Warhammer Community"
 
         rss.append("<item>")
@@ -119,8 +110,13 @@ def main():
 
     rss.append("</channel></rss>")
 
+    Path("docs").mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_PATH, "wb") as f:
         f.write("\n".join(rss).encode("utf-8"))
+
+    # Create marker AFTER first successful build
+    if is_first_run:
+        FIRST_RUN_MARKER.write_text("done\n", encoding="utf-8")
 
 if __name__ == "__main__":
     main()
