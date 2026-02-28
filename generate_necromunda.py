@@ -9,7 +9,7 @@ from urllib.request import urlopen, Request
 SITEMAP_URL = "https://www.warhammer-community.com/sitemap.xml"
 ARTICLE_RE = re.compile(r"^https://www\.warhammer-community\.com/en-gb/articles/")
 
-MAX_ITEMS = 50      # wie viele Necromunda-Artikel im Feed landen
+MAX_ITEMS = 150      # wie viele Necromunda-Artikel im Feed landen
 MAX_SCAN = 200      # wie viele der neuesten Artikel max. geprüft werden (Performance-Limit)
 
 NECRO_MARKERS = [
