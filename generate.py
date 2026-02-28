@@ -13,7 +13,7 @@ MAX_ITEMS = 150
 OUTPUT_PATH = "docs/rss.xml"
 
 CHANNEL_TITLE = "The N3W5-Servitor – Warhammer News"
-CHANNEL_LINK = "https://www.warhammer-community.com/en-gb/all-news-and-features/"
+CHANNEL_LINK = "https://www.warhammer-community.com/en-gb/all-news-and-features/?sortby=date_desc&page=1"
 CHANNEL_DESC = "Unofficial RSS generated from Warhammer Community sitemap.xml (titles extracted)"
 
 # --- Helpers ---
