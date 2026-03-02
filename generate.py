@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 from urllib.request import urlopen, Request
 from pathlib import Path
 
+FORCE_KICK_ONCE = True
+
 # --- Settings ---
 SITEMAP_URL = "https://www.warhammer-community.com/sitemap.xml"
 ARTICLE_RE = re.compile(r"^https://www\.warhammer-community\.com/en-gb/articles/")
@@ -53,8 +55,8 @@ def extract_title(page_html: str) -> str:
 def main():
     # First run => only publish 1 newest item (prevents backlog spam on bot attach)
     is_first_run = not FIRST_RUN_MARKER.exists()
-    target_count = 1 if is_first_run else MAX_ITEMS
-
+    target_count = MAX_ITEMS
+    
     xml_bytes = fetch(SITEMAP_URL)
     root = ET.fromstring(xml_bytes)
     ns = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
@@ -104,9 +106,16 @@ def main():
         rss.append("<item>")
         rss.append(f"<title>{xml_escape(title)}</title>")
         rss.append(f"<link>{xml_escape(loc)}</link>")
-        rss.append(f"<guid isPermaLink=\"true\">{xml_escape(loc)}</guid>")
-        rss.append(f"<pubDate>{rfc2822(dt.astimezone(timezone.utc))}</pubDate>")
-        rss.append("</item>")
+        
+        guid = loc
+
+       # Kick nur beim ersten Item (neuester Artikel) und nur wenn FORCE aktiv ist
+       if FORCE_KICK_ONCE and (dt, loc) == items[0]:
+       guid = loc + "#kick1"
+
+       rss.append(f"<guid isPermaLink=\"true\">{xml_escape(guid)}</guid>")
+       rss.append(f"<pubDate>{rfc2822(dt.astimezone(timezone.utc))}</pubDate>")
+       rss.append("</item>")
 
     rss.append("</channel></rss>")
 
