@@ -9,7 +9,7 @@ from urllib.request import urlopen, Request
 SITEMAP_URL = "https://www.warhammer-community.com/sitemap.xml"
 ARTICLE_RE = re.compile(r"^https://www\.warhammer-community\.com/en-gb/articles/")
 
-MAX_ITEMS = 50
+MAX_ITEMS = 150
 OUTPUT_PATH = "docs/rss.xml"
 
 CHANNEL_TITLE = "N3W5-Servitor – All News"
