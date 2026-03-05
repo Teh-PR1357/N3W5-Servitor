@@ -4,14 +4,13 @@ import html as html_lib
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from urllib.request import urlopen, Request
-from pathlib import Path
 
 # --- Settings ---
 SITEMAP_URL = "https://www.warhammer-community.com/sitemap.xml"
 ARTICLE_RE = re.compile(r"^https://www\.warhammer-community\.com/en-gb/articles/")
 
-MAX_ITEMS = 100
-MAX_SCAN = 300
+MAX_ITEMS = 50      # wie viele Necromunda-Artikel im Feed landen
+MAX_SCAN = 200      # wie viele der neuesten Artikel max. geprüft werden (Performance-Limit)
 
 NECRO_MARKERS = [
     "/topics/necromunda/",
@@ -26,11 +25,12 @@ CHANNEL_TITLE = "N3W5-Servitor – Necromunda"
 CHANNEL_LINK = "https://www.warhammer-community.com/en-gb/setting/necromunda/"
 CHANNEL_DESC = "Necromunda-only RSS feed (sitemap-based, filtered; titles extracted)"
 
-FIRST_RUN_MARKER = Path("docs/.first_run_done_necromunda")
-
 # --- Helpers ---
 def fetch(url: str) -> bytes:
-    req = Request(url, headers={"User-Agent": "Mozilla/5.0 (RSS generator; github actions)"})
+    req = Request(
+        url,
+        headers={"User-Agent": "Mozilla/5.0 (RSS generator; github actions)"},
+    )
     with urlopen(req, timeout=30) as r:
         return r.read()
 
@@ -62,15 +62,13 @@ def is_necromunda(page_html_lower: str) -> bool:
 
 # --- Main ---
 def main():
-    is_first_run = not FIRST_RUN_MARKER.exists()
-    target_count = 1 if is_first_run else MAX_ITEMS
-
     xml_bytes = fetch(SITEMAP_URL)
     root = ET.fromstring(xml_bytes)
     ns = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
 
     candidates: list[tuple[datetime, str]] = []
 
+    # 1) Collect candidate article URLs + lastmod (no HTML fetch yet)
     for url_el in root.findall("sm:url", ns):
         loc_el = url_el.find("sm:loc", ns)
         lastmod_el = url_el.find("sm:lastmod", ns)
@@ -90,24 +88,28 @@ def main():
 
         candidates.append((dt, loc))
 
+    # 2) Newest first
     candidates.sort(key=lambda x: x[0], reverse=True)
 
-    items: list[tuple[datetime, str, str]] = []
+    # 3) Scan newest MAX_SCAN articles, fetch HTML, keep first MAX_ITEMS that match Necromunda
+    items: list[tuple[datetime, str, str]] = []  # (dt, url, title)
     for dt, loc in candidates[:MAX_SCAN]:
         try:
             page_html = fetch(loc).decode("utf-8", errors="ignore")
         except Exception:
             continue
 
-        if not is_necromunda(page_html.lower()):
+        page_lower = page_html.lower()
+        if not is_necromunda(page_lower):
             continue
 
         title = extract_title(page_html)
         items.append((dt, loc, title))
 
-        if len(items) >= target_count:
+        if len(items) >= MAX_ITEMS:
             break
 
+    # 4) Build RSS
     now = datetime.now(timezone.utc)
 
     rss: list[str] = []
@@ -129,12 +131,8 @@ def main():
 
     rss.append("</channel></rss>")
 
-    Path("docs").mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_PATH, "wb") as f:
         f.write("\n".join(rss).encode("utf-8"))
-
-    if is_first_run:
-        FIRST_RUN_MARKER.write_text("done\n", encoding="utf-8")
 
 if __name__ == "__main__":
     main()
